@@ -1,3 +1,2 @@
-lib/build/*
-lib/.cache/*
-*.txt
+build/*
+.cache/*
