@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/zimon/Projects/string-formatter/fmt/lib/build",
-  "command": "/usr/bin/cc -Dfmt_EXPORTS  -fPIC -o CMakeFiles/fmt.dir/src/fmt.c.o -c /home/zimon/Projects/string-formatter/fmt/lib/src/fmt.c",
-  "file": "/home/zimon/Projects/string-formatter/fmt/lib/src/fmt.c"
-}
-]
