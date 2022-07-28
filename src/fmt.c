@@ -193,7 +193,7 @@ char * f(struct FMT * fmt) {
 		case PTR: return fmt_ptr(fmt->ptr, fmt);
 		case STR: {
 						if (fmt->ptr != NULL) {
-							while (((char *)fmt->ptr)[fmt->str_len++]);
+							while (*((char*)fmt->ptr + fmt->str_len++));
 							fmt->str_len--;
 						}
 						#ifdef _DEBUG
@@ -448,7 +448,7 @@ char * format(const char * format, ...) {
 	char c;
 	va_list list;
 	va_start(list, format);
-	for (unsigned int i = 0; (c = format[i++]);) {	
+	for (unsigned int i = 0; (c = format[i++]);) {
 		if (c != '{') {
 			buf[buf_index++] = c;
 			continue;
@@ -495,24 +495,33 @@ char * format(const char * format, ...) {
 		} else {
 			for (unsigned int j = 0; j < fmt->count; ++j) {
 				pop_arg(fmt, list);
+				fmt->str_len = 0;
 				src = f(fmt);
-				size += fmt->str_len + fmt->d_len;
+				size += fmt->str_len;
 				if (fmt->d_len && j) {
+					size += fmt->d_len;
 					const unsigned int s_size = fmt->str_len + fmt->d_len;
 					char * d_buf = malloc(sizeof(char) * s_size);
 					concat(d_buf, fmt->delim, 0);
 					concat(d_buf, src, fmt->d_len);
 					src = d_buf;
 					src[s_size] = 0;
-					free(fmt->delim);
 				}
 				buf = realloc(buf, sizeof(char) * size);
 				buf_index += concat(buf, src, buf_index);
 			}
 		}
+		if (fmt->delim)
+			free(fmt->delim);
 		free(fmt);
 	}
 	buf[buf_index] = 0;
+	#ifdef _DEBUG
+		if (size != buf_index + 1) {
+			println("{u} == {u}", size, buf_index);
+			println("{s}", buf);
+		}
+	#endif
 	va_end(list);
 	return buf;
 
@@ -528,11 +537,12 @@ struct FMT * init_fmt() {
 }
 
 unsigned int len(const char * str) {
-	unsigned int len = 1, i = 0;
-	for (;str[i++] != 0; ++len) {
-		if (str[i] != '{')
-			continue;
-		while (str[i++] != '}');
+	unsigned int len = 1, i = 0, start, end;
+	for (unsigned int i = 0; str[i]; ++i) {
+		if (str[i] == '{')
+			while (str[++i] != '}');
+		else 
+			++len;
 	}
 	//printf("Format len: %u\n", len);
 	return len;
