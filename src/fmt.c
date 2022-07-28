@@ -79,24 +79,29 @@ char * fmt_to_str(struct FMT *);
 const char hex_digits[] = "0123456789ABCDEF";
 
 char * fmt_llong(long long int val, struct FMT * fmt) {
+	unsigned int is_neg = val < 0, len = 1 + (is_neg | fmt->show_sign);
+	
+	if (is_neg) { val = -val; }
+
 	unsigned long long int list = val;
-	int len = 1, is_neg = val < 0;
-	if (is_neg) {
-		val = -val;
-		list = val;
-	}
+	
 	while (list /= 10) ++len;
+	
 	char * buf = malloc(sizeof(char) * (len + 1));
-	if (is_neg) { buf[0] = '-'; ++len; fmt->show_sign = 1; }
-	else if (fmt->show_sign) { buf[0] = '+'; ++len; }
+	
+	if (is_neg) { buf[0] = '-'; fmt->show_sign = 1; }
+	else if (fmt->show_sign) { buf[0] = '+'; }
+
 	for (unsigned int i = len; i-- != fmt->show_sign; val /= 10) {
 		buf[i] = '0' + (val % 10);
 	}
 	buf[len] = 0;
 	fmt->str_len = len;
+
 	#ifdef _DEBUG
 		printf("Size Int: %d\n", fmt->str_len);
 	#endif
+
 	return buf;
 }
 
@@ -491,18 +496,23 @@ char * format(const char * format, ...) {
 			for (unsigned int j = 0; j < fmt->count; ++j) {
 				pop_arg(fmt, list);
 				src = f(fmt);
-				size += fmt->str_len /*+ fmt->d_len */;
-				buf = realloc(buf, size);
-				// if (fmt->d_len && j) {
-				// 	concat(fmt->delim, src, fmt->d_len);
-				// 	src = fmt->delim;
-				// }
-				buf_index += concat(buf, src, buf_index);	
+				size += fmt->str_len + fmt->d_len;
+				if (fmt->d_len && j) {
+					const unsigned int s_size = fmt->str_len + fmt->d_len;
+					char * d_buf = malloc(sizeof(char) * s_size);
+					concat(d_buf, fmt->delim, 0);
+					concat(d_buf, src, fmt->d_len);
+					src = d_buf;
+					src[s_size] = 0;
+					free(fmt->delim);
+				}
+				buf = realloc(buf, sizeof(char) * size);
+				buf_index += concat(buf, src, buf_index);
 			}
 		}
 		free(fmt);
 	}
-	buf[size - 1] = 0;
+	buf[buf_index] = 0;
 	va_end(list);
 	return buf;
 
