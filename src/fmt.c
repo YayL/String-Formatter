@@ -22,6 +22,7 @@ struct FMT {
 	char repeat;
 	char var_len;
 	char show_sign;
+	char stop;
 	unsigned int pointer; // size of array
 	
 	unsigned int count;
@@ -71,6 +72,7 @@ unsigned int len(const char *);
 int concat(char *, char *, unsigned int);
 
 const char * type_to_str(unsigned int);
+
 #ifdef _DEBUG
 char * fmt_to_str(struct FMT *);
 #endif
@@ -343,6 +345,11 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 						fmt->type += 2;
 						return ret;
 					  }
+			case '!': {
+						  int ret = parse(format, i, fmt);
+						  fmt->stop = 1; 
+						  return ret;
+					  }
 			case ':': {
 						int len = *i;
 						while (format[(len)++] != '}');
@@ -443,13 +450,13 @@ int println(const char * format, ...) {
 
 char * format(const char * format, ...) {
 
-	unsigned int size = len(format), buf_index = 0;
+	unsigned int size = len(format), buf_index = 0, stop_mode = 0;
 	char * buf = malloc(size * sizeof(char));
 	char c;
 	va_list list;
 	va_start(list, format);
 	for (unsigned int i = 0; (c = format[i++]);) {
-		if (c != '{') {
+		if (stop_mode || c != '{') {
 			buf[buf_index++] = c;
 			continue;
 		}
@@ -501,7 +508,7 @@ char * format(const char * format, ...) {
 				if (fmt->d_len && j) {
 					size += fmt->d_len;
 					const unsigned int s_size = fmt->str_len + fmt->d_len;
-					char * d_buf = malloc(sizeof(char) * s_size);
+					char * d_buf = malloc(sizeof(char) * (s_size + 1));
 					concat(d_buf, fmt->delim, 0);
 					concat(d_buf, src, fmt->d_len);
 					src = d_buf;
@@ -513,6 +520,13 @@ char * format(const char * format, ...) {
 		}
 		if (fmt->delim)
 			free(fmt->delim);
+		if (fmt->stop) {
+			stop_mode = 1;
+			int start = buf_index;
+			while (format[++start]);
+			size += start - buf_index;
+			buf = realloc(buf, sizeof(char) * size);
+		}
 		free(fmt);
 	}
 	buf[buf_index] = 0;
@@ -539,10 +553,11 @@ struct FMT * init_fmt() {
 unsigned int len(const char * str) {
 	unsigned int len = 1, i = 0, start, end;
 	for (unsigned int i = 0; str[i]; ++i) {
-		if (str[i] == '{')
+		if (str[i] == '{') {
 			while (str[++i] != '}');
-		else 
+		} else {
 			++len;
+		}
 	}
 	//printf("Format len: %u\n", len);
 	return len;
