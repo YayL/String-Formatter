@@ -381,10 +381,10 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 
 int _print(const char * format, va_list list) {
 
-	unsigned int size = len(format), i = 0;
+	unsigned int size = len(format), i = 0, stop_mode = 0;
 	char c;
 	while ((c = format[i++])) {	
-		if (c != '{') {
+		if (stop_mode || c != '{') {
 			putc(c, stdout);
 			continue;
 		}
@@ -421,6 +421,7 @@ int _print(const char * format, va_list list) {
 				p(fmt);
 			}
 		}
+		stop_mode = fmt->stop;
 		// printf("\n%s\n\n", fmt_to_str(fmt));
 		free(fmt);
 	}
