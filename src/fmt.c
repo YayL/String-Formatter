@@ -448,10 +448,9 @@ int print(const char * format, ...) {
 
 int println(const char * format, ...) {
 
-	va_list list, copy;
+	va_list list;
 	va_start(list, format);
-	va_copy(copy, list);
-	int ret = _print(format, copy);
+	int ret = _print(format, list);
 	va_end(list);
 	putc(10, stdout);
 	return ret;
@@ -469,6 +468,7 @@ char * format(const char * format, ...) {
 		if (buf_index >= size) {
 			println("[FMT Error]: Attempted to writing past malloced buffer");
 			free(buf);
+			va_end(list);
 			return 0;
 		} else if (stop_mode || c != '{') {
 			buf[buf_index++] = c;
@@ -479,6 +479,7 @@ char * format(const char * format, ...) {
 		if (!parse(format, &i, fmt)) {
 			free(fmt);
 			free(buf);
+			va_end(list);
 			return NULL;
 		}
 
@@ -510,6 +511,7 @@ char * format(const char * format, ...) {
 				if (buf == NULL) {
 					free(orig);
 					free(src);
+					va_end(list);
 					return NULL;
 				}
 				buf_index += concat(buf, src, buf_index);
@@ -535,6 +537,7 @@ char * format(const char * format, ...) {
 				if (buf == NULL) {
 					free(orig);
 					free(src);
+					va_end(list);
 					return NULL;
 				}
 				buf_index += concat(buf, src, buf_index);
@@ -559,6 +562,7 @@ char * format(const char * format, ...) {
 				if (buf == NULL) {
 					free(orig);
 					free(src);
+					va_end(list);
 					return NULL;
 				}
 				buf_index += concat(buf, src, buf_index);
