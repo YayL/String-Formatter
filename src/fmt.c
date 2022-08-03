@@ -20,7 +20,7 @@ struct FMT {
 	int hex;
 
 	char repeat;
-	char var_len;
+	char var_length;
 	char show_sign;
 	char stop;
 	unsigned int pointer; // size of array
@@ -29,8 +29,8 @@ struct FMT {
 	unsigned int type;
 
 	char * delim;
-	unsigned int d_len;
-	unsigned int str_len;
+	unsigned int d_length;
+	unsigned int str_length;
 };
 
 struct FMT * init_fmt();
@@ -81,27 +81,27 @@ char * fmt_to_str(struct FMT *);
 const char hex_digits[] = "0123456789ABCDEF";
 
 char * fmt_llong(long long int val, struct FMT * fmt) {
-	unsigned int is_neg = val < 0, len = 1 + (is_neg | fmt->show_sign);
+	unsigned int is_neg = val < 0, length = 1 + (is_neg | fmt->show_sign);
 	
 	if (is_neg) { val = -val; }
 
 	unsigned long long int list = val;
 	
-	while (list /= 10) ++len;
+	while (list /= 10) ++length;
 	
-	char * buf = malloc(sizeof(char) * (len + 1));
+	char * buf = malloc(sizeof(char) * (length + 1));
 	
 	if (is_neg) { buf[0] = '-'; fmt->show_sign = 1; }
 	else if (fmt->show_sign) { buf[0] = '+'; }
 
-	for (unsigned int i = len; i-- != fmt->show_sign; val /= 10) {
+	for (unsigned int i = length; i-- != fmt->show_sign; val /= 10) {
 		buf[i] = '0' + (val % 10);
 	}
-	buf[len] = 0;
-	fmt->str_len = len;
+	buf[length] = 0;
+	fmt->str_length = length;
 
 	#ifdef _DEBUG
-		printf("Size Int: %d\n", fmt->str_len);
+		printf("Size Int: %d\n", fmt->str_length);
 	#endif
 
 	return buf;
@@ -109,43 +109,43 @@ char * fmt_llong(long long int val, struct FMT * fmt) {
 
 char * fmt_ullong(unsigned long long int val, struct FMT * fmt) {
 	long long unsigned int list = val;
-	unsigned int len = 1, i = 0;
+	unsigned int length = 1, i = 0;
 
-	while ((list /= 10)) ++len;
-	char * buf = malloc(sizeof(char) * (len + 1));
-	for (unsigned int i = len; i--; val /= 10) {
+	while ((list /= 10)) ++length;
+	char * buf = malloc(sizeof(char) * (length + 1));
+	for (unsigned int i = length; i--; val /= 10) {
 		buf[i] = '0' + (val % 10);
 	}
-	buf[len] = 0;
-	fmt->str_len = len;
+	buf[length] = 0;
+	fmt->str_length = length;
 	#ifdef _DEBUG
-		printf("Size Unsigned: %d\n", fmt->str_len);
+		printf("Size Unsigned: %d\n", fmt->str_length);
 	#endif
 	return buf;
 }
 
 char * fmt_hex(unsigned long int val, struct FMT * fmt) {
-	unsigned long int list = val, len = 3, is_neg = 0;	
-	while (list >>= 4) ++len;
-	char * buf = malloc(sizeof(char) * (len + 1));
-	buf[0] = '0', buf[1] = 'x', buf[len] = 0;
-	fmt->str_len = len;
+	unsigned long int list = val, length = 3, is_neg = 0;	
+	while (list >>= 4) ++length;
+	char * buf = malloc(sizeof(char) * (length + 1));
+	buf[0] = '0', buf[1] = 'x', buf[length] = 0;
+	fmt->str_length = length;
 	do {
-		buf[--len] = hex_digits[val & 15];
+		buf[--length] = hex_digits[val & 15];
 		val >>= 4;
 	} while (val);
 	#ifdef _DEBUG
-		printf("Size Hex: %d\n", fmt->str_len);
+		printf("Size Hex: %d\n", fmt->str_length);
 	#endif
 	return buf;
 } 
 
 char * fmt_double(double val, struct FMT * fmt) { 
-	// unsigned int len = val & (1 << 63);
+	// unsigned int length = val & (1 << 63);
 	// long long int fraction = val & ((1 << 53) - 1);
-	// while (fraction /= 10) ++len;
-	// char * buf = malloc(sizeof(char) * (len + 1));
-	// if (len) { buf[0] = '-'; ++len }
+	// while (fraction /= 10) ++length;
+	// char * buf = malloc(sizeof(char) * (length + 1));
+	// if (length) { buf[0] = '-'; ++len }
 	char * buf = "not implemented.";
 	return buf;
 
@@ -154,7 +154,7 @@ char * fmt_double(double val, struct FMT * fmt) {
 char * fmt_ptr(void * val, struct FMT * fmt) {
 	// printf("%p\n", val);
 	if (val == NULL) {
-		fmt->str_len = 6;
+		fmt->str_length = 6;
 		return "(NULL)";
 	} else {
 		return fmt_hex(*((long int*)val), fmt);
@@ -166,15 +166,15 @@ char * f(struct FMT * fmt) {
 		case CHAR: {
 						char * buf = malloc(2);
 						buf[0] = fmt->i; buf[1] = 0;
-						fmt->str_len = 1;
+						fmt->str_length = 1;
 						return buf;
 				   }
 		case BOOL: {
 					   if (fmt->i) {
-						   fmt->str_len = 4;
+						   fmt->str_length = 4;
 						   return "true";
 					   } else {
-						   fmt->str_len = 5;
+						   fmt->str_length = 5;
 						   return "false";
 					   }
 				   }
@@ -195,11 +195,11 @@ char * f(struct FMT * fmt) {
 		case PTR: return fmt_ptr(fmt->ptr, fmt);
 		case STR: {
 						if (fmt->ptr != NULL) {
-							while (*((char*)fmt->ptr + fmt->str_len++));
-							fmt->str_len--;
+							while (*((char*)fmt->ptr + fmt->str_length++));
+							fmt->str_length--;
 						}
 						#ifdef _DEBUG
-							printf("Size Str: %d\n", fmt->str_len);
+							printf("Size Str: %d\n", fmt->str_length);
 						#endif
 						return fmt->ptr;
 				  }
@@ -333,7 +333,7 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 			case 'D': fmt->type = LDOUBLE; break; // long double
 			case 'b': fmt->type = BOOL; break; // boolean (char converted to 'true' or 'false')
 			case 'r': fmt->repeat = 1; break; // repeat argument
-			case 'q': fmt->var_len = 1; break; // use unsigned int variable for count
+			case 'q': fmt->var_length = 1; break; // use unsigned int variable for count
 			case 'S': fmt->show_sign = 1; break; // show + before positive numbers
 			case 'l': {
 						int ret = parse(format, i, fmt);
@@ -351,14 +351,14 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 						  return ret;
 					  }
 			case ':': {
-						int len = *i;
-						while (format[(len)++] != '}');
-						len -= *i + 1;
-						char * buf = malloc((len + 1) * sizeof(char));
-						for (unsigned int j = 0; j < len; ++j) buf[j] = format[(*i)+j];
-						*i += len + 1; 
-						buf[len] = 0;
-						fmt->d_len = len;
+						int length = *i;
+						while (format[(length)++] != '}');
+						length -= *i + 1;
+						char * buf = malloc((length + 1) * sizeof(char));
+						for (unsigned int j = 0; j < length; ++j) buf[j] = format[(*i)+j];
+						*i += length + 1; 
+						buf[length] = 0;
+						fmt->d_length = length;
 						fmt->delim = buf;
 						return 1;
 					  }
@@ -366,8 +366,8 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 						fmt->pointer = 1;
 						fmt->count = 0;
 						int ret = parse(format, i, fmt);
-						if (!fmt->count || !fmt->var_len) {
-							println("\n[FMT Error]: A pointer specifier must be followed by a length");
+						if (!fmt->count || !fmt->var_length) {
+							println("\n[FMT Error]: A pointer specifier must be followed by a lengthgth");
 							return 0;
 						} else if (fmt->count) fmt->pointer = fmt->count;
 						return ret;
@@ -381,9 +381,9 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 
 int _print(const char * format, va_list list) {
 
-	unsigned int size = len(format), i = 0, stop_mode = 0;
+	unsigned int i = 0, stop_mode = 0;
 	char c;
-	while ((c = format[i++])) {	
+	while ((c = format[i++])) {
 		if (stop_mode || c != '{') {
 			putc(c, stdout);
 			continue;
@@ -391,10 +391,11 @@ int _print(const char * format, va_list list) {
 
 		struct FMT * fmt = init_fmt();
 		if (!parse(format, &i, fmt)) {
+			free(fmt);
 			return 0;
 		}
 
-		if (fmt->var_len) {
+		if (fmt->var_length) {
 			if (fmt->pointer) fmt->pointer = va_arg(list, unsigned int);
 			else fmt->count = va_arg(list, unsigned int);
 		}
@@ -402,20 +403,20 @@ int _print(const char * format, va_list list) {
 		if (fmt->repeat) {
 			pop_arg(fmt, list);
 			for (unsigned int j = 0; j < fmt->count; ++j) {
-				if (fmt->d_len && j) 
+				if (fmt->d_length && j) 
 					p_str(fmt->delim);
 				p(fmt);
 			}
 		} else if (fmt->pointer) {
 			fmt->ptr = va_arg(list, void *);
 			for (unsigned int j = 0; j < fmt->pointer; ++j) {
-				if (fmt->d_len && j)
+				if (fmt->d_length && j)
 					p_str(fmt->delim);
 				p(fmt);
 			}
 		} else {
 			for (unsigned int j = 0; j < fmt->count; ++j) {
-				if (fmt->d_len && j) 
+				if (fmt->d_length && j) 
 					p_str(fmt->delim);
 				pop_arg(fmt, list);
 				p(fmt);
@@ -457,19 +458,22 @@ char * format(const char * format, ...) {
 	va_list list;
 	va_start(list, format);
 	for (unsigned int i = 0; (c = format[i++]);) {
-		if (stop_mode || c != '{') {
+		if (buf_index >= size) {
+			println("[FMT Error]: Attempted to writing past malloced buffer");
+			free(buf);
+			return 0;
+		} else if (stop_mode || c != '{') {
 			buf[buf_index++] = c;
 			continue;
 		}
 
-		unsigned int copy = i;
-
 		struct FMT * fmt = init_fmt();
 		if (!parse(format, &i, fmt)) {
+			free(fmt);
 			return 0;
 		}
 
-		if (fmt->var_len) {
+		if (fmt->var_length) {
 			if (fmt->pointer) fmt->pointer = va_arg(list, unsigned int);
 			else fmt->count = va_arg(list, unsigned int);
 		}
@@ -480,10 +484,10 @@ char * format(const char * format, ...) {
 			pop_arg(fmt, list);
 			for (unsigned int j = 0; j < fmt->count; ++j) {
 				src = f(fmt);
-				size += fmt->str_len + fmt->d_len;	
+				size += fmt->str_length + fmt->d_length;
 				buf = realloc(buf, size);
-				if (fmt->d_len && j) {
-					concat(fmt->delim, src, fmt->d_len);
+				if (fmt->d_length && j) {
+					concat(fmt->delim, src, fmt->d_length);
 					src = fmt->delim;
 				}
 				buf_index += concat(buf, src, buf_index);
@@ -492,10 +496,10 @@ char * format(const char * format, ...) {
 			fmt->ptr = va_arg(list, void *);
 			for (unsigned int j = 0; j < fmt->pointer; ++j) {
 				src = f(fmt);
-				size += fmt->str_len + fmt->d_len;
+				size += fmt->str_length + fmt->d_length;
 				buf = realloc(buf, size);
-				if (fmt->d_len && j) {
-					concat(fmt->delim, src, fmt->d_len);
+				if (fmt->d_length && j) {
+					concat(fmt->delim, src, fmt->d_length);
 					src = fmt->delim;
 				}
 				buf_index += concat(buf, src, buf_index);
@@ -503,15 +507,15 @@ char * format(const char * format, ...) {
 		} else {
 			for (unsigned int j = 0; j < fmt->count; ++j) {
 				pop_arg(fmt, list);
-				fmt->str_len = 0;
+				fmt->str_length = 0;
 				src = f(fmt);
-				size += fmt->str_len;
-				if (fmt->d_len && j) {
-					size += fmt->d_len;
-					const unsigned int s_size = fmt->str_len + fmt->d_len;
+				size += fmt->str_length;
+				if (fmt->d_length && j) {
+					size += fmt->d_length;
+					const unsigned int s_size = fmt->str_length + fmt->d_length;
 					char * d_buf = malloc(sizeof(char) * (s_size + 1));
 					concat(d_buf, fmt->delim, 0);
-					concat(d_buf, src, fmt->d_len);
+					concat(d_buf, src, fmt->d_length);
 					src = d_buf;
 					src[s_size] = 0;
 				}
@@ -552,26 +556,26 @@ struct FMT * init_fmt() {
 }
 
 unsigned int len(const char * str) {
-	unsigned int len = 1, i = 0, start, end;
+	unsigned int length = 1, i = 0, start, end;
 	for (unsigned int i = 0; str[i]; ++i) {
 		if (str[i] == '{') {
 			while (str[++i] != '}');
 		} else {
-			++len;
+			++length;
 		}
 	}
-	//printf("Format len: %u\n", len);
-	return len;
+	//printf("Format length: %u\n", len);
+	return length;
 }
 
-int concat(char * dest, char * src, unsigned int dest_len) {
+int concat(char * dest, char * src, unsigned int dest_length) {
 	unsigned int i = 0;
 	if (src != NULL) {
 		while (src[i]) {
-			dest[dest_len++] = src[i++];
+			dest[dest_length++] = src[i++];
 		}
 	}
-	dest[dest_len] = 0;
+	dest[dest_length] = 0;
 	return i;
 }
 
