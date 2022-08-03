@@ -81,7 +81,7 @@ char * fmt_to_str(struct FMT *);
 const char hex_digits[] = "0123456789ABCDEF";
 
 char * fmt_llong(long long int val, struct FMT * fmt) {
-	unsigned int is_neg = val < 0, length = 1 + (is_neg | fmt->show_sign);
+	char is_neg = val < 0, length = 1 + (is_neg | fmt->show_sign);
 	
 	if (is_neg) { val = -val; }
 
@@ -94,7 +94,7 @@ char * fmt_llong(long long int val, struct FMT * fmt) {
 	if (is_neg) { buf[0] = '-'; fmt->show_sign = 1; }
 	else if (fmt->show_sign) { buf[0] = '+'; }
 
-	for (unsigned int i = length; i-- != fmt->show_sign; val /= 10) {
+	for (char i = length; i-- != fmt->show_sign; val /= 10) {
 		buf[i] = '0' + (val % 10);
 	}
 	buf[length] = 0;
@@ -109,7 +109,7 @@ char * fmt_llong(long long int val, struct FMT * fmt) {
 
 char * fmt_ullong(unsigned long long int val, struct FMT * fmt) {
 	long long unsigned int list = val;
-	unsigned int length = 1, i = 0;
+	unsigned int length = 1;
 
 	while ((list /= 10)) ++length;
 	char * buf = malloc(sizeof(char) * (length + 1));
@@ -125,7 +125,7 @@ char * fmt_ullong(unsigned long long int val, struct FMT * fmt) {
 }
 
 char * fmt_hex(unsigned long int val, struct FMT * fmt) {
-	unsigned long int list = val, length = 3, is_neg = 0;	
+	unsigned long int list = val, length = 3;
 	while (list >>= 4) ++length;
 	char * buf = malloc(sizeof(char) * (length + 1));
 	buf[0] = '0', buf[1] = 'x', buf[length] = 0;
@@ -211,9 +211,16 @@ char * f(struct FMT * fmt) {
 }
 
 void p_ullong(unsigned long long int val, struct FMT * fmt) {
-	char * buf = fmt_ullong(val, fmt);
-	p_str(buf);
-	free(buf);
+	long long unsigned int reversed = 0;
+	char length = 0;
+	do {
+		reversed = 10 * reversed + (val % 10); ++length;
+	} while (val /= 10);
+
+	while (length--) {
+		putc('0' + (reversed % 10), stdout);
+		reversed /= 10;
+	}
 }
 
 void p_llong(long long int val, struct FMT * fmt) {
@@ -227,15 +234,16 @@ void p_llong(long long int val, struct FMT * fmt) {
 }
 
 void p_hex(unsigned long int val, struct FMT * fmt) {
-	char * buf = fmt_hex(val, fmt);
-	p_str(buf);
-	free(buf);
+	unsigned long int list = val;
+	for (char length = 0; list >>= 4; ++length);
+	p_str("0x");
+	do {
+		putc(hex_digits[val & 15], stdout);
+	} while (val >>= 4);
 }
 
 void p_double(double val, struct FMT * fmt) {
-	char * buf = fmt_double(val, fmt);
-	p_str(buf);
-	free(buf);
+	p_str("p_double");
 }
 
 void p_str(char * val) {
@@ -351,7 +359,7 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 						  return ret;
 					  }
 			case ':': {
-						int length = *i;
+						unsigned int length = *i;
 						while (format[(length)++] != '}');
 						length -= *i + 1;
 						char * buf = malloc((length + 1) * sizeof(char));
@@ -470,7 +478,8 @@ char * format(const char * format, ...) {
 		struct FMT * fmt = init_fmt();
 		if (!parse(format, &i, fmt)) {
 			free(fmt);
-			return 0;
+			free(buf);
+			return NULL;
 		}
 
 		if (fmt->var_length) {
@@ -500,6 +509,7 @@ char * format(const char * format, ...) {
 				buf = realloc(orig, sizeof(char) * size);
 				if (buf == NULL) {
 					free(orig);
+					free(src);
 					return NULL;
 				}
 				buf_index += concat(buf, src, buf_index);
@@ -524,6 +534,7 @@ char * format(const char * format, ...) {
 				buf = realloc(orig, sizeof(char) * size);
 				if (buf == NULL) {
 					free(orig);
+					free(src);
 					return NULL;
 				}
 				buf_index += concat(buf, src, buf_index);
@@ -547,6 +558,7 @@ char * format(const char * format, ...) {
 				buf = realloc(orig, sizeof(char) * size);
 				if (buf == NULL) {
 					free(orig);
+					free(src);
 					return NULL;
 				}
 				buf_index += concat(buf, src, buf_index);
@@ -585,7 +597,7 @@ struct FMT * init_fmt() {
 }
 
 unsigned int len(const char * str) {
-	unsigned int length = 1, i = 0, start, end;
+	unsigned int length = 1;
 	for (unsigned int i = 0; str[i]; ++i) {
 		if (str[i] == '{') {
 			while (str[++i] != '}');
