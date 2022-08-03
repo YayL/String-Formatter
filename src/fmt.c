@@ -483,24 +483,48 @@ char * format(const char * format, ...) {
 		if (fmt->repeat) {
 			pop_arg(fmt, list);
 			for (unsigned int j = 0; j < fmt->count; ++j) {
+				pop_arg(fmt, list);
+				fmt->str_length = 0;
 				src = f(fmt);
-				size += fmt->str_length + fmt->d_length;
-				buf = realloc(buf, size);
+				size += fmt->str_length;
 				if (fmt->d_length && j) {
-					concat(fmt->delim, src, fmt->d_length);
-					src = fmt->delim;
+					size += fmt->d_length;
+					const unsigned int s_size = fmt->str_length + fmt->d_length;
+					char * d_buf = malloc(sizeof(char) * (s_size + 1));
+					concat(d_buf, fmt->delim, 0);
+					concat(d_buf, src, fmt->d_length);
+					src = d_buf;
+					src[s_size] = 0;
+				}
+				char * orig = buf;
+				buf = realloc(orig, sizeof(char) * size);
+				if (buf == NULL) {
+					free(orig);
+					return NULL;
 				}
 				buf_index += concat(buf, src, buf_index);
 			}
 		} else if (fmt->pointer) {
 			fmt->ptr = va_arg(list, void *);
 			for (unsigned int j = 0; j < fmt->pointer; ++j) {
+				pop_arg(fmt, list);
+				fmt->str_length = 0;
 				src = f(fmt);
-				size += fmt->str_length + fmt->d_length;
-				buf = realloc(buf, size);
+				size += fmt->str_length;
 				if (fmt->d_length && j) {
-					concat(fmt->delim, src, fmt->d_length);
-					src = fmt->delim;
+					size += fmt->d_length;
+					const unsigned int s_size = fmt->str_length + fmt->d_length;
+					char * d_buf = malloc(sizeof(char) * (s_size + 1));
+					concat(d_buf, fmt->delim, 0);
+					concat(d_buf, src, fmt->d_length);
+					src = d_buf;
+					src[s_size] = 0;
+				}
+				char * orig = buf;
+				buf = realloc(orig, sizeof(char) * size);
+				if (buf == NULL) {
+					free(orig);
+					return NULL;
 				}
 				buf_index += concat(buf, src, buf_index);
 			}
@@ -519,7 +543,12 @@ char * format(const char * format, ...) {
 					src = d_buf;
 					src[s_size] = 0;
 				}
-				buf = realloc(buf, sizeof(char) * size);
+				char * orig = buf;
+				buf = realloc(orig, sizeof(char) * size);
+				if (buf == NULL) {
+					free(orig);
+					return NULL;
+				}
 				buf_index += concat(buf, src, buf_index);
 			}
 		}
