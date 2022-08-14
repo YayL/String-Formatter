@@ -31,6 +31,8 @@ struct FMT {
 	char * delim;
 	unsigned int d_length;
 	unsigned int str_length;
+
+	FILE * fp;
 };
 
 struct FMT * init_fmt();
@@ -55,7 +57,7 @@ void p_ullong(unsigned long long int, struct FMT *);
 
 void p_hex(unsigned long int, struct FMT *);
 void p_double(double, struct FMT *);
-void p_str(char *);
+void p_str(char *, FILE *);
 void p_ptr(void *, struct FMT *);
 
 void p(struct FMT *);
@@ -66,7 +68,7 @@ int parse(const char *, unsigned int *, struct FMT *);
 unsigned int parse_uint(const char *, unsigned int *);
 
 void pop_arg(struct FMT *, va_list);
-int _print(const char *, va_list);
+int _print(const char *, va_list, FILE *);
 
 unsigned int len(const char *);
 int concat(char *, char *, unsigned int);
@@ -218,17 +220,17 @@ void p_ullong(unsigned long long int val, struct FMT * fmt) {
 	} while (val /= 10);
 
 	while (length--) {
-		putc('0' + (reversed % 10), stdout);
+		putc('0' + (reversed % 10), fmt->fp);
 		reversed /= 10;
 	}
 }
 
 void p_llong(long long int val, struct FMT * fmt) {
 	if (val < 0) {
-		putc('-', stdout);
+		putc('-', fmt->fp);
 		val = -val;
 	} else if (fmt->show_sign) {
-		putc('+', stdout);
+		putc('+', fmt->fp);
 	}
 	p_ullong(val, fmt);
 }
@@ -236,25 +238,25 @@ void p_llong(long long int val, struct FMT * fmt) {
 void p_hex(unsigned long int val, struct FMT * fmt) {
 	unsigned long int list = val;
 	for (char length = 0; list >>= 4; ++length);
-	p_str("0x");
+	p_str("0x", fmt->fp);
 	do {
-		putc(hex_digits[val & 15], stdout);
+		putc(hex_digits[val & 15], fmt->fp);
 	} while (val >>= 4);
 }
 
 void p_double(double val, struct FMT * fmt) {
-	p_str("p_double");
+	p_str("p_double", fmt->fp);
 }
 
-void p_str(char * val) {
+void p_str(char * val, FILE * fp) {
 	if (val != NULL) {
-		while (*val) putc(*(val++), stdout);
+		fputs(val, fp);
 	}
 }
 
 void p_ptr(void * val, struct FMT * fmt) {
 	if (val == NULL) {
-		p_str("(NULL)");
+		p_str("(NULL)", fmt->fp);
 	} else {
 		p_hex((unsigned long int)val, fmt);
 	}
@@ -263,8 +265,8 @@ void p_ptr(void * val, struct FMT * fmt) {
 
 void p(struct FMT * fmt) {	
 	switch (fmt->type) {
-		case CHAR:		putc(fmt->i, stdout); break;
-		case BOOL:		p_str(fmt->i ? "true" : "false"); break;
+		case CHAR:		putc(fmt->i, fmt->fp); break;
+		case BOOL:		p_str(fmt->i ? "true" : "false", fmt->fp); break;
 
 		case INT:
 		case LONG:
@@ -280,7 +282,7 @@ void p(struct FMT * fmt) {
 		case LDOUBLE:	p_double(fmt->d, fmt); break;
 					
 		case PTR:		p_ptr(fmt->ptr, fmt); break;
-		case STR:		p_str(fmt->ptr); break;
+		case STR:		p_str(fmt->ptr, fmt->fp); break;
 		default: println("\n[FMT Error]: '{s}' is not a valid type", type_to_str(fmt->type));
 	}
 }
@@ -327,7 +329,7 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 	char c;
 	while ((c = format[(*i)++]) != '}') {
 		if(c == EOF) {
-			println("\n[FMT Error]: While parsing encountered EOF");
+			println("\n[FMT Error]: While parsing encountered end of string");
 			return 0;
 		}
 		switch(c) {
@@ -387,13 +389,16 @@ int parse(const char * format, unsigned int * i, struct FMT * fmt) {
 	return 1;
 }
 
-int _print(const char * format, va_list list) {
-
+int _print(const char * format, va_list list, FILE * fp) {
+	
 	unsigned int i = 0, stop_mode = 0;
 	char c;
 	while ((c = format[i++])) {
-		if (stop_mode || c != '{') {
-			putc(c, stdout);
+		if (stop_mode) {
+			fputs(&format[i - 1], fp);
+			break;
+		} else if (c != '{') {
+			putc(c, fp);
 			continue;
 		}
 
@@ -402,6 +407,7 @@ int _print(const char * format, va_list list) {
 			free(fmt);
 			return 0;
 		}
+		fmt->fp = fp;
 
 		if (fmt->var_length) {
 			if (fmt->pointer) fmt->pointer = va_arg(list, unsigned int);
@@ -412,20 +418,20 @@ int _print(const char * format, va_list list) {
 			pop_arg(fmt, list);
 			for (unsigned int j = 0; j < fmt->count; ++j) {
 				if (fmt->d_length && j) 
-					p_str(fmt->delim);
+					p_str(fmt->delim, fmt->fp);
 				p(fmt);
 			}
 		} else if (fmt->pointer) {
 			fmt->ptr = va_arg(list, void *);
 			for (unsigned int j = 0; j < fmt->pointer; ++j) {
 				if (fmt->d_length && j)
-					p_str(fmt->delim);
+					p_str(fmt->delim, fmt->fp);
 				p(fmt);
 			}
 		} else {
 			for (unsigned int j = 0; j < fmt->count; ++j) {
 				if (fmt->d_length && j) 
-					p_str(fmt->delim);
+					p_str(fmt->delim, fmt->fp);
 				pop_arg(fmt, list);
 				p(fmt);
 			}
@@ -441,7 +447,7 @@ int print(const char * format, ...) {
 
 	va_list list;
 	va_start(list, format);
-	int ret = _print(format, list);
+	int ret = _print(format, list, stdout);
 	va_end(list);
 	return ret;
 }
@@ -450,11 +456,18 @@ int println(const char * format, ...) {
 
 	va_list list;
 	va_start(list, format);
-	int ret = _print(format, list);
+	int ret = _print(format, list, stdout);
 	va_end(list);
 	putc(10, stdout);
 	return ret;
+}
 
+int writef(FILE * out, const char * format, ...) {
+	va_list list;
+	va_start(list, format);
+	int ret = _print(format, list, out);
+	va_end(list);
+	return ret;
 }
 
 char * format(const char * format, ...) {
@@ -476,19 +489,20 @@ char * format(const char * format, ...) {
 		}
 
 		struct FMT * fmt = init_fmt();
+		fmt->fp = stderr;
 		if (!parse(format, &i, fmt)) {
 			free(fmt);
 			free(buf);
 			va_end(list);
-			return NULL;
+			return 0;
 		}
 
 		if (fmt->var_length) {
 			if (fmt->pointer) fmt->pointer = va_arg(list, unsigned int);
 			else fmt->count = va_arg(list, unsigned int);
 		}
-
-		char * src;
+		
+		char * src = 0;
 
 		if (fmt->repeat) {
 			pop_arg(fmt, list);
@@ -506,14 +520,9 @@ char * format(const char * format, ...) {
 					src = d_buf;
 					src[s_size] = 0;
 				}
-				char * orig = buf;
-				buf = realloc(orig, sizeof(char) * size);
-				if (buf == NULL) {
-					free(orig);
-					free(src);
-					va_end(list);
-					return NULL;
-				}
+				buf = realloc(buf, sizeof(char) * size);
+				if (buf == NULL)
+					break;
 				buf_index += concat(buf, src, buf_index);
 			}
 		} else if (fmt->pointer) {
@@ -532,14 +541,9 @@ char * format(const char * format, ...) {
 					src = d_buf;
 					src[s_size] = 0;
 				}
-				char * orig = buf;
-				buf = realloc(orig, sizeof(char) * size);
-				if (buf == NULL) {
-					free(orig);
-					free(src);
-					va_end(list);
-					return NULL;
-				}
+				buf = realloc(buf, sizeof(char) * size);
+				if (buf == NULL)
+					break;
 				buf_index += concat(buf, src, buf_index);
 			}
 		} else {
@@ -557,14 +561,9 @@ char * format(const char * format, ...) {
 					src = d_buf;
 					src[s_size] = 0;
 				}
-				char * orig = buf;
-				buf = realloc(orig, sizeof(char) * size);
-				if (buf == NULL) {
-					free(orig);
-					free(src);
-					va_end(list);
-					return NULL;
-				}
+				buf = realloc(buf, sizeof(char) * size);
+				if (buf == NULL)
+					break;
 				buf_index += concat(buf, src, buf_index);
 			}
 		}
@@ -578,6 +577,11 @@ char * format(const char * format, ...) {
 			buf = realloc(buf, sizeof(char) * size);
 		}
 		free(fmt);
+		if (buf == NULL) {
+			free(buf);
+			free(src);
+			return NULL;
+		}
 	}
 	buf[buf_index] = 0;
 	#ifdef _DEBUG
