@@ -143,14 +143,9 @@ char * fmt_hex(unsigned long int val, struct FMT * fmt) {
 } 
 
 char * fmt_double(double val, struct FMT * fmt) { 
-	// unsigned int length = val & (1 << 63);
-	// long long int fraction = val & ((1 << 53) - 1);
-	// while (fraction /= 10) ++length;
-	// char * buf = malloc(sizeof(char) * (length + 1));
-	// if (length) { buf[0] = '-'; ++len }
-	char * buf = "not implemented.";
+	char * buf = NULL;
+    asprintf(&buf, "%f%n", val, &fmt->str_length);
 	return buf;
-
 }
 
 char * fmt_ptr(void * val, struct FMT * fmt) {
@@ -191,8 +186,8 @@ char * f(struct FMT * fmt) {
 
 		case HEX: return fmt_hex(fmt->i, fmt);
 
-		// case DOUBLE:
-		// case LDOUBLE:
+		case DOUBLE:
+		case LDOUBLE: return fmt_double(fmt->d, fmt);
 
 		case PTR: return fmt_ptr(fmt->ptr, fmt);
 		case STR: {
@@ -245,7 +240,7 @@ void p_hex(unsigned long int val, struct FMT * fmt) {
 }
 
 void p_double(double val, struct FMT * fmt) {
-	p_str("p_double", fmt->fp);
+	p_str(fmt_double(val, fmt), fmt->fp);
 }
 
 void p_str(char * val, FILE * fp) {
@@ -562,8 +557,9 @@ char * format(const char * format, ...) {
 					src[s_size] = 0;
 				}
 				buf = realloc(buf, sizeof(char) * size);
-				if (buf == NULL)
+				if (buf == NULL) {
 					break;
+                }
 				buf_index += concat(buf, src, buf_index);
 			}
 		}
