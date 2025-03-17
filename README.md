@@ -10,7 +10,7 @@
 | Type | i | Signed integer | int | "Balance: {i}", 123 | Balance: 123 |
 | Type | u | Unsigned integer | unsigned int |
 | Type | x | Placeholder for 'u' in hexadecimal | unsigned int | "{u} = {x}", 123, 123 | 123 = 0x7b |
-| Type | d | **NOT IMPLEMENTED YET** |
+| Type | d | Floating point | float |
 | Type | p | Placeholder for a pointer address | void * |
 | Type | s | places a string | char * | "Hello, {s}", "World!" | Hello, World! |
 | |
